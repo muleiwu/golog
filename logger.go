@@ -27,15 +27,17 @@ type Config struct {
 
 // NewLogger creates a new logger with example configuration (for testing only)
 func NewLogger() *Logger {
+	// Add caller skip to show correct file and line number
+	logger := zap.NewExample(zap.AddCallerSkip(1))
 	return &Logger{
-		logger: zap.NewExample(),
+		logger: logger,
 	}
 }
 
 // NewDevelopmentLogger creates a logger suitable for development
 // with human-readable console output and debug-level logging
 func NewDevelopmentLogger() (*Logger, error) {
-	logger, err := zap.NewDevelopment()
+	logger, err := zap.NewDevelopment(zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +47,7 @@ func NewDevelopmentLogger() (*Logger, error) {
 // NewProductionLogger creates a logger suitable for production
 // with JSON output and info-level logging
 func NewProductionLogger() (*Logger, error) {
-	logger, err := zap.NewProduction()
+	logger, err := zap.NewProduction(zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +69,8 @@ func NewLoggerWithConfig(config Config) (*Logger, error) {
 		zapConfig.EncoderConfig = zap.NewDevelopmentEncoderConfig()
 	}
 
-	logger, err := zapConfig.Build()
+	// Add caller skip to show correct file and line number
+	logger, err := zapConfig.Build(zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +79,7 @@ func NewLoggerWithConfig(config Config) (*Logger, error) {
 }
 
 // NewLoggerWithZap creates a logger from an existing zap.Logger
+// Note: If you need caller skip, pass a logger with AddCallerSkip already configured
 func NewLoggerWithZap(zapLogger *zap.Logger) *Logger {
 	return &Logger{logger: zapLogger}
 }

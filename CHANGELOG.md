@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better variable naming (receiver -> l/f for brevity)
 
 ### Fixed
+- **Caller information now shows correct file and line number** - Added `zap.AddCallerSkip(1)` to all logger constructors so logs show the actual caller location instead of internal golog wrapper functions
 - Memory allocation optimization in field conversion
 
 ## [1.0.0] - 2024-02-10

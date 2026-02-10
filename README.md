@@ -16,6 +16,7 @@ A flexible and structured logging library for Go, built on top of [uber-go/zap](
 - 🎨 **Multiple Output Formats**: JSON and console encoding
 - 🔌 **Interface Compliant**: Implements the gsr.Logger interface
 - 🛠️ **Easy to Use**: Simple and intuitive API
+- 📍 **Accurate Caller Info**: Logs show the correct file and line number where the log was called
 
 ## Installation
 
