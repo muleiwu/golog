@@ -86,6 +86,10 @@ type Config struct {
 	// Default is 0, which will be automatically set to 1 (skip golog wrapper).
 	// Set to 1+ if you wrap golog in your own logger (1 = single wrap, 2 = double wrap, etc.).
 	CallerSkip uint
+	// DisableCallerTrim disables trimming of the caller path.
+	// When true, shows full path from module root (e.g., pkg/service/cron/service/cron_server.go:67)
+	// When false (default), shows shortened path (e.g., service/cron_server.go:67)
+	DisableCallerTrim bool
 }
 
 // NewLogger creates a new logger with example configuration (for testing only)
@@ -119,17 +123,26 @@ func NewProductionLogger() (*Logger, error) {
 
 // NewLoggerWithConfig creates a new logger with custom configuration
 func NewLoggerWithConfig(config Config) (*Logger, error) {
+	// Create encoder config based on development mode
+	var encoderConfig zapcore.EncoderConfig
+	if config.Development {
+		encoderConfig = zap.NewDevelopmentEncoderConfig()
+	} else {
+		encoderConfig = zap.NewProductionEncoderConfig()
+	}
+
+	// Configure caller encoder based on DisableCallerTrim
+	if config.DisableCallerTrim {
+		encoderConfig.EncodeCaller = zapcore.FullCallerEncoder
+	}
+
 	zapConfig := zap.Config{
 		Level:            zap.NewAtomicLevelAt(config.Level.toZapLevel()),
 		Development:      config.Development,
 		Encoding:         config.Encoding,
-		EncoderConfig:    zap.NewProductionEncoderConfig(),
+		EncoderConfig:    encoderConfig,
 		OutputPaths:      config.OutputPaths,
 		ErrorOutputPaths: config.ErrorOutputPaths,
-	}
-
-	if config.Development {
-		zapConfig.EncoderConfig = zap.NewDevelopmentEncoderConfig()
 	}
 
 	// Use configured caller skip + 1 (for golog wrapper)

@@ -201,6 +201,7 @@ The `Config` struct supports the following options:
 | `OutputPaths` | `[]string` | Output destinations (e.g., "stdout", file paths) |
 | `ErrorOutputPaths` | `[]string` | Error output destinations (e.g., "stderr") |
 | `CallerSkip` | `uint` | Additional stack frames to skip (automatically +1 for golog). Default: 0 (total skip=1). Set to 1 for single wrapper, 2 for double wrapper, etc. |
+| `DisableCallerTrim` | `bool` | Disable trimming of caller path. Default: false (shows short path like `service/server.go:67`). Set to true for full path from module root (like `pkg/service/cron/service/server.go:67`) |
 
 ### Log Levels
 
@@ -337,6 +338,29 @@ func (m *MyLogger) Info(msg string, fields ...gsr.LoggerField) {
 - `1` = Single wrapper (skip 2: golog + your wrapper)
 - `2` = Double wrapper (skip 3: golog + 2 wrappers)
 - `N` = N wrappers (skip N+1: golog + N wrappers)
+
+### Full Caller Path Example
+
+For complex projects with deep directory structures, use `DisableCallerTrim`:
+
+```go
+logger, err := golog.NewLoggerWithConfig(golog.Config{
+    Level:             golog.InfoLevel,
+    Development:       true,
+    Encoding:          "console",
+    OutputPaths:       []string{"stdout"},
+    DisableCallerTrim: true,  // Show full path from module root
+})
+
+// Output: 2026-02-11T10:09:15.151+0800    INFO    pkg/service/cron/service/cron_server.go:67    正在停止服务...
+// Instead of: service/cron_server.go:67
+```
+
+**When to use:**
+- ✅ Complex projects with deep directory structures
+- ✅ Multiple packages with similar file names
+- ✅ Need full context of where the log came from
+- ❌ Simple projects (default short path is cleaner)
 
 ## Dependencies
 

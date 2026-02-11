@@ -249,6 +249,38 @@ func TestSyncMultipleTimes(t *testing.T) {
 	}
 }
 
+func TestDisableCallerTrim(t *testing.T) {
+	// Test with DisableCallerTrim = false (default, shows short path)
+	logger1, err := NewLoggerWithConfig(Config{
+		Level:             InfoLevel,
+		Development:       true,
+		Encoding:          "console",
+		OutputPaths:       []string{"stdout"},
+		DisableCallerTrim: false, // Default: short path
+	})
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
+	defer logger1.Sync()
+
+	logger1.Info("Test with short caller path")
+
+	// Test with DisableCallerTrim = true (shows full path from module root)
+	logger2, err := NewLoggerWithConfig(Config{
+		Level:             InfoLevel,
+		Development:       true,
+		Encoding:          "console",
+		OutputPaths:       []string{"stdout"},
+		DisableCallerTrim: true, // Full path from module root
+	})
+	if err != nil {
+		t.Fatalf("Failed to create logger with full path: %v", err)
+	}
+	defer logger2.Sync()
+
+	logger2.Info("Test with full caller path from module root")
+}
+
 func TestConfigWithCallerSkip(t *testing.T) {
 	// Test default caller skip (0 means actual skip = 0+1 = 1, same as preset loggers)
 	config1 := Config{

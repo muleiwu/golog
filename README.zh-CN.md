@@ -201,6 +201,7 @@ childLogger := logger.WithZapFields(
 | `OutputPaths` | `[]string` | 输出目标(如 "stdout"、文件路径) |
 | `ErrorOutputPaths` | `[]string` | 错误输出目标(如 "stderr") |
 | `CallerSkip` | `uint` | 额外跳过的栈帧数(自动 +1 用于 golog)。默认值：0(总共跳过 1 层)。单层封装设为 1，双层封装设为 2，以此类推。 |
+| `DisableCallerTrim` | `bool` | 禁用调用者路径裁剪。默认：false(显示短路径如 `service/server.go:67`)。设为 true 显示从模块根目录开始的完整路径(如 `pkg/service/cron/service/server.go:67`) |
 
 ### 日志级别说明
 
@@ -337,6 +338,29 @@ func (m *MyLogger) Info(msg string, fields ...gsr.LoggerField) {
 - `1` = 单层封装(跳过 2 层: golog + 你的封装)
 - `2` = 双层封装(跳过 3 层: golog + 2 层封装)
 - `N` = N 层封装(跳过 N+1 层: golog + N 层封装)
+
+### 完整调用路径示例
+
+对于具有深层目录结构的复杂项目，使用 `DisableCallerTrim`:
+
+```go
+logger, err := golog.NewLoggerWithConfig(golog.Config{
+    Level:             golog.InfoLevel,
+    Development:       true,
+    Encoding:          "console",
+    OutputPaths:       []string{"stdout"},
+    DisableCallerTrim: true,  // 显示从模块根目录开始的完整路径
+})
+
+// 输出: 2026-02-11T10:09:15.151+0800    INFO    pkg/service/cron/service/cron_server.go:67    正在停止服务...
+// 而不是: service/cron_server.go:67
+```
+
+**使用场景:**
+- ✅ 具有深层目录结构的复杂项目
+- ✅ 多个包中有相似的文件名
+- ✅ 需要完整的上下文了解日志来源
+- ❌ 简单项目(默认短路径更简洁)
 
 ## 依赖
 
