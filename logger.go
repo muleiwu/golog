@@ -203,8 +203,35 @@ func (l *Logger) Panic(format string, args ...gsr.LoggerField) {
 
 // Sync flushes any buffered log entries
 // Applications should call Sync before exiting
+// Note: Sync errors on stdout/stderr are ignored as they cannot be synced on some systems
 func (l *Logger) Sync() error {
-	return l.logger.Sync()
+	err := l.logger.Sync()
+	if err == nil {
+		return nil
+	}
+
+	// Ignore "bad file descriptor" and "invalid argument" errors
+	// These occur when trying to sync stdout/stderr on some systems
+	errMsg := err.Error()
+	if containsAny(errMsg, "bad file descriptor", "invalid argument", "inappropriate ioctl for device") {
+		return nil
+	}
+
+	return err
+}
+
+// containsAny checks if s contains any of the substrings
+func containsAny(s string, substrs ...string) bool {
+	for _, substr := range substrs {
+		if len(s) >= len(substr) {
+			for i := 0; i <= len(s)-len(substr); i++ {
+				if s[i:i+len(substr)] == substr {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // With creates a child logger with additional fields

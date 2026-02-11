@@ -208,6 +208,47 @@ func TestLevelInConfig(t *testing.T) {
 	}
 }
 
+func TestSync(t *testing.T) {
+	// Test that Sync() doesn't return errors for stdout/stderr
+	logger, err := NewLoggerWithConfig(Config{
+		Level:            InfoLevel,
+		Development:      true,
+		Encoding:         "console",
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
+
+	logger.Info("Test message before sync")
+
+	// This should not return an error even though stdout/stderr can't be synced
+	err = logger.Sync()
+	if err != nil {
+		t.Errorf("Sync() returned unexpected error: %v", err)
+	}
+}
+
+func TestSyncMultipleTimes(t *testing.T) {
+	logger := NewLogger()
+
+	logger.Info("Message 1")
+	if err := logger.Sync(); err != nil {
+		t.Errorf("First Sync() failed: %v", err)
+	}
+
+	logger.Info("Message 2")
+	if err := logger.Sync(); err != nil {
+		t.Errorf("Second Sync() failed: %v", err)
+	}
+
+	// Multiple syncs should be safe
+	if err := logger.Sync(); err != nil {
+		t.Errorf("Third Sync() failed: %v", err)
+	}
+}
+
 func TestConfigWithCallerSkip(t *testing.T) {
 	// Test default caller skip (0 means actual skip = 0+1 = 1, same as preset loggers)
 	config1 := Config{

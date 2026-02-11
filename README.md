@@ -215,8 +215,10 @@ The `Config` struct supports the following options:
 
 1. **Always call `Sync()`**: Ensure logs are flushed before program exit
    ```go
-   defer logger.Sync()
+   defer logger.Sync()  // Safe to call, handles stdout/stderr gracefully
    ```
+
+   Note: `Sync()` automatically ignores errors from stdout/stderr (which cannot be synced on some systems), so you can safely use `defer logger.Sync()` without worrying about "bad file descriptor" errors.
 
 2. **Use appropriate log levels**:
    - `Debug` for development debugging

@@ -215,8 +215,10 @@ childLogger := logger.WithZapFields(
 
 1. **始终调用 `Sync()`**: 确保程序退出前日志被刷新
    ```go
-   defer logger.Sync()
+   defer logger.Sync()  // 安全调用，自动处理 stdout/stderr
    ```
+
+   注意：`Sync()` 会自动忽略 stdout/stderr 的错误（在某些系统上无法同步），所以你可以安全地使用 `defer logger.Sync()` 而不用担心 "bad file descriptor" 错误。
 
 2. **使用适当的日志级别**:
    - `Debug` 用于开发调试
