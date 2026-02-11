@@ -95,7 +95,7 @@ logger := golog.NewLogger()
 
 ```go
 logger, err := golog.NewLoggerWithConfig(golog.Config{
-    Level:            zapcore.DebugLevel,
+    Level:            golog.DebugLevel,  // 使用 golog.Level 常量
     Development:      true,
     Encoding:         "console",
     OutputPaths:      []string{"stdout", "/var/log/app.log"},
@@ -106,6 +106,14 @@ if err != nil {
 }
 defer logger.Sync()
 ```
+
+**可用的日志级别:**
+- `golog.DebugLevel` - 调试消息
+- `golog.InfoLevel` - 信息消息（默认）
+- `golog.WarnLevel` - 警告消息
+- `golog.ErrorLevel` - 错误消息
+- `golog.FatalLevel` - 致命消息（调用 os.Exit）
+- `golog.PanicLevel` - 恐慌消息（记录后 panic）
 
 #### 从已有的 Zap 日志器创建
 
@@ -187,11 +195,12 @@ childLogger := logger.WithZapFields(
 
 | 字段 | 类型 | 描述 |
 |------|------|------|
-| `Level` | `zapcore.Level` | 最小日志级别 (Debug、Info、Warn、Error) |
+| `Level` | `golog.Level` | 最小日志级别 (DebugLevel、InfoLevel、WarnLevel、ErrorLevel、FatalLevel、PanicLevel) |
 | `Development` | `bool` | 启用开发模式(更易读) |
 | `Encoding` | `string` | 输出格式: "json" 或 "console" |
 | `OutputPaths` | `[]string` | 输出目标(如 "stdout"、文件路径) |
 | `ErrorOutputPaths` | `[]string` | 错误输出目标(如 "stderr") |
+| `CallerSkip` | `uint` | 额外跳过的栈帧数(自动 +1 用于 golog)。默认值：0(总共跳过 1 层)。单层封装设为 1，双层封装设为 2，以此类推。 |
 
 ### 日志级别说明
 
@@ -247,7 +256,7 @@ import (
 
 func main() {
     logger, err := golog.NewLoggerWithConfig(golog.Config{
-        Level:            zapcore.InfoLevel,
+        Level:            golog.InfoLevel,
         Development:      false,
         Encoding:         "json",
         OutputPaths:      []string{"stdout", "/var/log/server.log"},
@@ -292,6 +301,40 @@ func processUser(logger *golog.Logger, userID int) error {
     return nil
 }
 ```
+
+### 封装日志器示例
+
+如果你在自己的日志器中封装 golog，将 `CallerSkip` 设置为封装层数：
+
+```go
+type MyLogger struct {
+    logger *golog.Logger
+}
+
+func NewMyLogger() (*MyLogger, error) {
+    logger, err := golog.NewLoggerWithConfig(golog.Config{
+        Level:       golog.InfoLevel,
+        Development: true,
+        Encoding:    "console",
+        OutputPaths: []string{"stdout"},
+        CallerSkip:  1, // 1 层封装(自动 +1 给 golog = 总共 2 层)
+    })
+    if err != nil {
+        return nil, err
+    }
+    return &MyLogger{logger: logger}, nil
+}
+
+func (m *MyLogger) Info(msg string, fields ...gsr.LoggerField) {
+    m.logger.Info(msg, fields...)  // 现在显示正确的调用位置
+}
+```
+
+**CallerSkip 设置指南:**
+- `0` = 直接使用(跳过 1 层: 仅 golog) - 与预设日志器相同
+- `1` = 单层封装(跳过 2 层: golog + 你的封装)
+- `2` = 双层封装(跳过 3 层: golog + 2 层封装)
+- `N` = N 层封装(跳过 N+1 层: golog + N 层封装)
 
 ## 依赖
 

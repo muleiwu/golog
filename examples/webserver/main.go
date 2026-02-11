@@ -5,13 +5,12 @@ import (
 	"time"
 
 	"github.com/muleiwu/golog"
-	"go.uber.org/zap/zapcore"
 )
 
 func main() {
 	// Create a production-ready logger with custom configuration
 	logger, err := golog.NewLoggerWithConfig(golog.Config{
-		Level:            zapcore.InfoLevel,
+		Level:            golog.InfoLevel,
 		Development:      false,
 		Encoding:         "json",
 		OutputPaths:      []string{"stdout"},

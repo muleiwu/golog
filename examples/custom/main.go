@@ -2,13 +2,12 @@ package main
 
 import (
 	"github.com/muleiwu/golog"
-	"go.uber.org/zap/zapcore"
 )
 
 func main() {
 	// Custom logger configuration
 	logger, err := golog.NewLoggerWithConfig(golog.Config{
-		Level:       zapcore.DebugLevel,
+		Level:       golog.DebugLevel,
 		Development: true,
 		Encoding:    "console",
 		OutputPaths: []string{

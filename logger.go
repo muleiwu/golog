@@ -6,6 +6,65 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// Level represents the logging level
+type Level int8
+
+const (
+	// DebugLevel logs are typically voluminous, and are usually disabled in production.
+	DebugLevel Level = iota - 1
+	// InfoLevel is the default logging priority.
+	InfoLevel
+	// WarnLevel logs are more important than Info, but don't need individual human review.
+	WarnLevel
+	// ErrorLevel logs are high-priority. If an application is running smoothly,
+	// it shouldn't generate any error-level logs.
+	ErrorLevel
+	// FatalLevel logs a message, then calls os.Exit(1).
+	FatalLevel
+	// PanicLevel logs a message, then panics.
+	PanicLevel
+)
+
+// String returns a lower-case ASCII representation of the log level.
+func (l Level) String() string {
+	switch l {
+	case DebugLevel:
+		return "debug"
+	case InfoLevel:
+		return "info"
+	case WarnLevel:
+		return "warn"
+	case ErrorLevel:
+		return "error"
+	case FatalLevel:
+		return "fatal"
+	case PanicLevel:
+		return "panic"
+	default:
+		return "unknown"
+	}
+}
+
+// toZapLevel converts our Level to zapcore.Level
+func (l Level) toZapLevel() zapcore.Level {
+	switch l {
+	case DebugLevel:
+		return zapcore.DebugLevel
+	case InfoLevel:
+		return zapcore.InfoLevel
+	case WarnLevel:
+		return zapcore.WarnLevel
+	case ErrorLevel:
+		return zapcore.ErrorLevel
+	case FatalLevel:
+		return zapcore.FatalLevel
+	case PanicLevel:
+		return zapcore.PanicLevel
+	default:
+		return zapcore.InfoLevel
+	}
+}
+
 // Logger wraps zap.Logger and implements the gsr.Logger interface
 type Logger struct {
 	logger *zap.Logger
@@ -14,7 +73,7 @@ type Logger struct {
 // Config holds the configuration for creating a new logger
 type Config struct {
 	// Level sets the minimum enabled logging level
-	Level zapcore.Level
+	Level Level
 	// Development puts the logger in development mode
 	Development bool
 	// Encoding sets the logger's encoding (json or console)
@@ -23,6 +82,10 @@ type Config struct {
 	OutputPaths []string
 	// ErrorOutputPaths is a list of URLs to write internal logger errors to
 	ErrorOutputPaths []string
+	// CallerSkip increases the number of callers skipped by caller annotation
+	// Default is 0, which will be automatically set to 1 (skip golog wrapper).
+	// Set to 1+ if you wrap golog in your own logger (1 = single wrap, 2 = double wrap, etc.).
+	CallerSkip uint
 }
 
 // NewLogger creates a new logger with example configuration (for testing only)
@@ -57,7 +120,7 @@ func NewProductionLogger() (*Logger, error) {
 // NewLoggerWithConfig creates a new logger with custom configuration
 func NewLoggerWithConfig(config Config) (*Logger, error) {
 	zapConfig := zap.Config{
-		Level:            zap.NewAtomicLevelAt(config.Level),
+		Level:            zap.NewAtomicLevelAt(config.Level.toZapLevel()),
 		Development:      config.Development,
 		Encoding:         config.Encoding,
 		EncoderConfig:    zap.NewProductionEncoderConfig(),
@@ -69,8 +132,12 @@ func NewLoggerWithConfig(config Config) (*Logger, error) {
 		zapConfig.EncoderConfig = zap.NewDevelopmentEncoderConfig()
 	}
 
-	// Add caller skip to show correct file and line number
-	logger, err := zapConfig.Build(zap.AddCallerSkip(1))
+	// Use configured caller skip + 1 (for golog wrapper)
+	// If CallerSkip is 0 (default), this results in 1 (same as preset loggers)
+	// If CallerSkip is 1+, it adds 1 for the golog wrapper layer
+	callerSkip := config.CallerSkip
+
+	logger, err := zapConfig.Build(zap.AddCallerSkip(int(callerSkip + 1)))
 	if err != nil {
 		return nil, err
 	}

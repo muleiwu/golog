@@ -2,8 +2,6 @@ package golog
 
 import (
 	"testing"
-
-	"go.uber.org/zap/zapcore"
 )
 
 func TestNewLogger(t *testing.T) {
@@ -45,7 +43,7 @@ func TestNewProductionLogger(t *testing.T) {
 
 func TestNewLoggerWithConfig(t *testing.T) {
 	config := Config{
-		Level:            zapcore.DebugLevel,
+		Level:            DebugLevel,
 		Development:      true,
 		Encoding:         "console",
 		OutputPaths:      []string{"stdout"},
@@ -165,4 +163,85 @@ func BenchmarkLoggerInfoWithMultipleFields(b *testing.B) {
 			Field("score", 95.5),
 		)
 	}
+}
+
+func TestLevel(t *testing.T) {
+	tests := []struct {
+		level    Level
+		expected string
+	}{
+		{DebugLevel, "debug"},
+		{InfoLevel, "info"},
+		{WarnLevel, "warn"},
+		{ErrorLevel, "error"},
+		{FatalLevel, "fatal"},
+		{PanicLevel, "panic"},
+	}
+
+	for _, tt := range tests {
+		if got := tt.level.String(); got != tt.expected {
+			t.Errorf("Level(%d).String() = %v, want %v", tt.level, got, tt.expected)
+		}
+	}
+}
+
+func TestLevelInConfig(t *testing.T) {
+	levels := []Level{DebugLevel, InfoLevel, WarnLevel, ErrorLevel}
+
+	for _, level := range levels {
+		config := Config{
+			Level:            level,
+			Development:      true,
+			Encoding:         "console",
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stderr"},
+		}
+
+		logger, err := NewLoggerWithConfig(config)
+		if err != nil {
+			t.Fatalf("NewLoggerWithConfig with Level=%v failed: %v", level, err)
+		}
+		defer logger.Sync()
+
+		// Just verify it doesn't panic
+		logger.Info("test message with level", Field("level", level.String()))
+	}
+}
+
+func TestConfigWithCallerSkip(t *testing.T) {
+	// Test default caller skip (0 means actual skip = 0+1 = 1, same as preset loggers)
+	config1 := Config{
+		Level:            DebugLevel,
+		Development:      true,
+		Encoding:         "console",
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+		CallerSkip:       0, // 0 + 1 = 1 (default, same as NewDevelopmentLogger)
+	}
+
+	logger1, err := NewLoggerWithConfig(config1)
+	if err != nil {
+		t.Fatalf("NewLoggerWithConfig failed: %v", err)
+	}
+	defer logger1.Sync()
+
+	// Test custom caller skip for wrapped loggers
+	config2 := Config{
+		Level:            InfoLevel,
+		Development:      false,
+		Encoding:         "json",
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+		CallerSkip:       1, // 1 + 1 = 2 (for single wrapper layer)
+	}
+
+	logger2, err := NewLoggerWithConfig(config2)
+	if err != nil {
+		t.Fatalf("NewLoggerWithConfig with CallerSkip=1 failed: %v", err)
+	}
+	defer logger2.Sync()
+
+	// Just verify they don't panic
+	logger1.Info("test with default caller skip (0+1=1)")
+	logger2.Info("test with custom caller skip (1+1=2)")
 }

@@ -95,7 +95,7 @@ Create a logger with custom settings:
 
 ```go
 logger, err := golog.NewLoggerWithConfig(golog.Config{
-    Level:            zapcore.DebugLevel,
+    Level:            golog.DebugLevel,  // Use golog.Level constants
     Development:      true,
     Encoding:         "console",
     OutputPaths:      []string{"stdout", "/var/log/app.log"},
@@ -106,6 +106,14 @@ if err != nil {
 }
 defer logger.Sync()
 ```
+
+**Available Log Levels:**
+- `golog.DebugLevel` - Debug messages
+- `golog.InfoLevel` - Informational messages (default)
+- `golog.WarnLevel` - Warning messages
+- `golog.ErrorLevel` - Error messages
+- `golog.FatalLevel` - Fatal messages (calls os.Exit)
+- `golog.PanicLevel` - Panic messages (panics after logging)
 
 #### From Existing Zap Logger
 
@@ -187,11 +195,12 @@ The `Config` struct supports the following options:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `Level` | `zapcore.Level` | Minimum logging level (Debug, Info, Warn, Error) |
+| `Level` | `golog.Level` | Minimum logging level (DebugLevel, InfoLevel, WarnLevel, ErrorLevel, FatalLevel, PanicLevel) |
 | `Development` | `bool` | Enable development mode (more human-readable) |
 | `Encoding` | `string` | Output format: "json" or "console" |
 | `OutputPaths` | `[]string` | Output destinations (e.g., "stdout", file paths) |
 | `ErrorOutputPaths` | `[]string` | Error output destinations (e.g., "stderr") |
+| `CallerSkip` | `uint` | Additional stack frames to skip (automatically +1 for golog). Default: 0 (total skip=1). Set to 1 for single wrapper, 2 for double wrapper, etc. |
 
 ### Log Levels
 
@@ -247,7 +256,7 @@ import (
 
 func main() {
     logger, err := golog.NewLoggerWithConfig(golog.Config{
-        Level:            zapcore.InfoLevel,
+        Level:            golog.InfoLevel,
         Development:      false,
         Encoding:         "json",
         OutputPaths:      []string{"stdout", "/var/log/server.log"},
@@ -292,6 +301,40 @@ func processUser(logger *golog.Logger, userID int) error {
     return nil
 }
 ```
+
+### Wrapping Logger Example
+
+If you wrap golog in your own logger, set `CallerSkip` to the number of wrapper layers:
+
+```go
+type MyLogger struct {
+    logger *golog.Logger
+}
+
+func NewMyLogger() (*MyLogger, error) {
+    logger, err := golog.NewLoggerWithConfig(golog.Config{
+        Level:       golog.InfoLevel,
+        Development: true,
+        Encoding:    "console",
+        OutputPaths: []string{"stdout"},
+        CallerSkip:  1, // 1 wrapper layer (auto +1 for golog = total 2)
+    })
+    if err != nil {
+        return nil, err
+    }
+    return &MyLogger{logger: logger}, nil
+}
+
+func (m *MyLogger) Info(msg string, fields ...gsr.LoggerField) {
+    m.logger.Info(msg, fields...)  // Now shows correct caller location
+}
+```
+
+**CallerSkip Guide:**
+- `0` = Direct usage (skip 1: golog only) - same as preset loggers
+- `1` = Single wrapper (skip 2: golog + your wrapper)
+- `2` = Double wrapper (skip 3: golog + 2 wrappers)
+- `N` = N wrappers (skip N+1: golog + N wrappers)
 
 ## Dependencies
 
